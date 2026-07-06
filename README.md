@@ -1,97 +1,93 @@
 # Supplier Risk Scorecard
 
-A weighted risk-scoring model that converts raw supplier quality data into a single, actionable risk score and tier classification — built with **SQL** and **Power BI**, using a methodology inspired by credit-risk scorecards (normalize → weight → aggregate → classify).
+Weighted risk-scoring model for supplier quality data. Built in SQL Server, visualized in Power BI. Same basic idea as a credit scorecard — normalize a set of metrics, weight them, add them up, sort suppliers into tiers.
 
-> **Note on data:** the dataset is synthetic, generated to statistically resemble real medical-device supply chain quality metrics (defect rates, complaint volume, audit outcomes, delivery reliability). No proprietary or employer data is used.
+> Dataset is synthetic. Built to match the structure of real medical-device supply chain quality data, but no proprietary or employer data here.
 
----
+## The problem
 
-## 1. Business Context
+Most supplier quality reporting is a pile of separate numbers — defect rate here, complaint count there, last audit score somewhere else. Nobody can compare Supplier A to Supplier B without pulling all of that together manually, and everyone who does it ends up weighting things differently in their head.
 
-Organizations that manage large supplier networks — manufacturers, medical device companies, and risk data providers alike — need a consistent, defensible way to answer one question: **which suppliers pose the greatest operational risk, and why?**
+This gives you one number per supplier instead, and a tier that tells you what to actually do about it.
 
-Traditional quality reporting (raw defect counts, complaint logs) tells you *what happened*. A scorecard model tells you *how risky each supplier is relative to the others*, in a single number stakeholders can act on — the same logic that underpins credit rating and counterparty risk models used across financial risk analytics.
+## How it's built
 
-## 2. Objective
+Scoring logic lives in SQL, not in the BI layer. Data goes into `supplier_quality_data`, `02_risk_score_calculation.sql` does the normalization/weighting/aggregation and writes to `supplier_risk_scores`, and `03_risk_tier_classification.sql` builds a view (`vw_supplier_risk_tiers`) that buckets suppliers into tiers. Power BI just connects to SQL Server and reads those two objects.
 
-Build a reproducible pipeline that:
-1. Ingests raw supplier quality data (shipments, defects, complaints, audits, delivery, financial stability)
-2. Normalizes each risk driver to a common 0–100 scale
-3. Applies business-weighted aggregation into one **Composite Risk Score**
-4. Classifies suppliers into **Risk Tiers** (Tier 1–4) for fast triage
-5. Visualizes results in an interactive Power BI dashboard
+Kept it this way on purpose — the scoring rule is a business rule, and I'd rather have that versioned in SQL than buried in a DAX measure someone forgets is doing math.
 
-## 3. Dataset
+## Dataset
 
-`data/supplier_quality_data.csv` — 120 simulated suppliers across 8 categories and 10 countries, with 16 fields including:
+`data/supplier_quality_data.csv` — 120 suppliers, 8 categories, 10 countries. Key fields:
 
-| Field | Description |
+| Field | What it's for |
 |---|---|
-| `defective_units` / `total_units_shipped` | Used to calculate defect rate |
-| `complaint_count`, `avg_severity_score`, `recurrence_flag` | Complaint profile |
+| `defective_units` / `total_units_shipped` | Defect rate |
+| `complaint_count`, `avg_severity_score`, `recurrence_flag` | Complaint history |
 | `on_time_delivery_rate` | Delivery reliability |
-| `audit_score`, `critical_findings_last_audit` | Quality system health |
-| `financial_stability_score` | Counterparty financial risk proxy |
+| `audit_score`, `critical_findings_last_audit` | Audit results |
+| `financial_stability_score` | Financial risk proxy |
 
-## 4. Methodology
+## Scoring
 
-The **Composite Risk Score** (0 = highest risk, 100 = lowest risk) is a weighted sum of five normalized components:
+Composite score: 0 (worst) to 100 (best), weighted sum of five things:
 
-| Risk Driver | Weight | Rationale |
+| Driver | Weight | Why |
 |---|---|---|
-| Defect Rate Performance | 25% | Direct measure of product quality failure |
-| Complaint & Severity Profile | 20% | Captures frequency, severity, and recurrence of issues |
-| Delivery Reliability | 15% | Operational dependability |
-| Audit / Quality System Health | 25% | Forward-looking indicator of systemic risk |
-| Financial Stability | 15% | Counterparty risk — a financially unstable supplier is a supply continuity risk |
+| Defect Rate | 25% | Most direct signal of product quality |
+| Complaints & Severity | 20% | Volume, severity, and recurrence — a repeat issue counts against you harder than a one-off |
+| Delivery Reliability | 15% | Can they actually deliver on time |
+| Audit / QMS Health | 25% | Weighted as high as defect rate because it's forward-looking, not historical |
+| Financial Stability | 15% | A supplier can have perfect quality and still be a risk if they're going under |
 
-Suppliers are then classified into tiers, mirroring how a rating agency bands issuers into risk categories:
+Then tiers:
 
-| Tier | Score Range | Action |
+| Tier | Score | Action |
 |---|---|---|
-| **Tier 1 — Low Risk** | 85–100 | Preferred supplier, standard monitoring |
-| **Tier 2 — Moderate Risk** | 70–84 | Routine monitoring |
-| **Tier 3 — Elevated Risk** | 50–69 | Corrective action plan required |
-| **Tier 4 — High Risk** | < 50 | Critical review / requalification |
+| Tier 1 — Low Risk | 85–100 | Standard monitoring |
+| Tier 2 — Moderate Risk | 70–84 | Routine monitoring |
+| Tier 3 — Elevated Risk | 50–69 | Needs a corrective action plan |
+| Tier 4 — High Risk | <50 | Critical review / requalification |
 
-See [`docs/methodology.md`](docs/methodology.md) for the full scoring logic and normalization formulas.
+Weights and thresholds aren't hardcoded assumptions I'm married to — full logic and formulas are in [`docs/methodology.md`](docs/methodology.md).
 
-## 5. Key Findings
+## What the current run shows
 
-Based on the current dataset run (120 suppliers):
+120 suppliers:
 
-- **3 suppliers (2.5%)** fall into **Tier 4 — High Risk**, requiring immediate requalification review.
-- **46 suppliers (38%)** sit in **Tier 3 — Elevated Risk**, the largest actionable segment — this is where corrective action plans have the most portfolio-wide impact.
-- Only **4 suppliers (3%)** achieve **Tier 1 — Low Risk**, suggesting the overall supplier base has room to improve against the scoring thresholds.
-- **Electronic Components** suppliers score highest on average (lowest risk), while **Precision Optics** suppliers score lowest — a signal for category-level sourcing review.
-- Risk is not concentrated in a single country — the lowest and highest-risk suppliers in the dataset span multiple regions, reinforcing that **supplier-level scoring catches risk that country-level heuristics would miss**.
+| Tier | Count | % | Avg Score |
+|---|---|---|---|
+| Tier 1 | 4 | 3.3% | 87.2 |
+| Tier 2 | 67 | 55.8% | 77.4 |
+| Tier 3 | 46 | 38.3% | 63.9 |
+| Tier 4 | 3 | 2.5% | 42.1 |
 
-## 6. Repository Structure
+Tier 3 is the biggest bucket by far — that's where a corrective action program would have the most impact, not Tier 4 (which is small enough to just handle case by case). Electronic Components suppliers score best on average, Precision Optics worst. And risk isn't clustered in one country — it's spread across the dataset, which is the whole point of scoring at the supplier level instead of just eyeballing by region.
 
-```
+## Structure
 supplier-risk-scorecard/
 ├── data/
-│   └── supplier_quality_data.csv       # Source dataset (synthetic)
+│   └── supplier_quality_data.csv
 ├── sql/
-│   ├── 01_data_exploration.sql         # Profiling & sanity checks
-│   ├── 02_risk_score_calculation.sql   # Core scoring logic
-│   └── 03_risk_tier_classification.sql # Tier assignment & summary
+│   ├── 01_data_exploration.sql
+│   ├── 02_risk_score_calculation.sql
+│   └── 03_risk_tier_classification.sql
 ├── docs/
-│   ├── methodology.md                  # Full scoring methodology
-│   └── dax_measures.md                 # Power BI DAX measures
+│   ├── methodology.md
+│   └── dax_measures.md
 ├── dashboard/
-│   └── dashboard_overview.md           # Dashboard structure & screenshots
+│   └── dashboard_overview.md
 └── README.md
-```
+## Stack
 
-## 7. Tech Stack
+SQL Server (scoring logic), Power BI (Import mode, connects straight to SQL Server), Python/pandas (only used to generate the synthetic dataset — not part of the actual pipeline).
 
-- **SQL** — data profiling, scoring logic, tier classification (portable across PostgreSQL / SQL Server / SQLite)
-- **Power BI** — interactive scorecard dashboard, DAX measures for dynamic scoring
-- **Python** (data generation only) — pandas/numpy, used solely to produce the synthetic dataset
+## What's not done yet
 
-## 8. About
+Weights and thresholds here are based on judgment, not fitted against real outcome data. Before this would run in production I'd want to check the weights against actual supply disruptions or quality escapes, get sign-off on where the tier cutoffs sit, and figure out a process for manual overrides. Splitting scoring (SQL) from presentation (Power BI) means that recalibration doesn't require touching the dashboard at all.
 
-Built by **Diego Jiménez** — Industrial Engineer with experience in medical device quality and process analytics (Genpact / Edwards Lifesciences), currently expanding into data analytics with a focus on **risk scoring and operational data**.
+## About
 
-[LinkedIn](#) · [Portfolio](#)
+Diego Jiménez — Sr. Associate, Data & Process Analyst at Genpact. Background in medical device quality and manufacturing analytics (Genpact, Edwards Lifesciences).
+
+[LinkedIn](https://www.linkedin.com/in/diego-jim%C3%A9nez-a8aa3a27b/)
