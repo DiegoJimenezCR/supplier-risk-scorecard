@@ -14,7 +14,11 @@
 --   Delivery Reliability           15%
 --   Audit / Quality System Health  25%
 --   Financial Stability            15%
+--
+-- Tested against SQL Server (T-SQL syntax).
 -- ============================================================
+
+DROP TABLE IF EXISTS supplier_risk_scores;
 
 WITH base AS (
     SELECT
@@ -37,29 +41,30 @@ WITH base AS (
     FROM supplier_quality_data
 ),
 
-normalized AS (
+raw_scores AS (
     SELECT
         *,
-        -- Defect rate: 0% = 100 pts, 5%+ = 0 pts (linear, capped)
-        GREATEST(0, LEAST(100, 100 - (defect_rate_pct / 5.0 * 100))) AS defect_score,
-
-        -- Complaint & severity: fewer complaints + lower severity + no recurrence = higher score
-        GREATEST(0, LEAST(100,
-            100
-            - (complaint_count * 4)
-            - (avg_severity_score * 8)
-            - (recurrence_flag * 15)
-        )) AS complaint_score,
-
-        -- Delivery reliability: on-time delivery rate maps directly (floor at 40%)
-        GREATEST(0, LEAST(100, (on_time_delivery_rate - 40) / 60.0 * 100)) AS delivery_score,
-
-        -- Audit health: audit score minus penalty per critical finding
-        GREATEST(0, LEAST(100, audit_score - (critical_findings_last_audit * 10))) AS audit_health_score,
-
-        -- Financial stability maps directly
-        GREATEST(0, LEAST(100, financial_stability_score)) AS financial_score
+        100 - (defect_rate_pct / 5.0 * 100) AS defect_raw,
+        100 - (complaint_count * 4) - (avg_severity_score * 8) - (recurrence_flag * 15) AS complaint_raw,
+        (on_time_delivery_rate - 40) / 60.0 * 100 AS delivery_raw,
+        audit_score - (critical_findings_last_audit * 10) AS audit_raw,
+        financial_stability_score AS financial_raw
     FROM base
+),
+
+normalized AS (
+    SELECT
+        supplier_id,
+        supplier_name,
+        country,
+        category,
+        defect_rate_pct,
+        CASE WHEN defect_raw < 0 THEN 0 WHEN defect_raw > 100 THEN 100 ELSE defect_raw END AS defect_score,
+        CASE WHEN complaint_raw < 0 THEN 0 WHEN complaint_raw > 100 THEN 100 ELSE complaint_raw END AS complaint_score,
+        CASE WHEN delivery_raw < 0 THEN 0 WHEN delivery_raw > 100 THEN 100 ELSE delivery_raw END AS delivery_score,
+        CASE WHEN audit_raw < 0 THEN 0 WHEN audit_raw > 100 THEN 100 ELSE audit_raw END AS audit_health_score,
+        CASE WHEN financial_raw < 0 THEN 0 WHEN financial_raw > 100 THEN 100 ELSE financial_raw END AS financial_score
+    FROM raw_scores
 ),
 
 scored AS (
@@ -85,5 +90,7 @@ scored AS (
 )
 
 SELECT *
-FROM scored
-ORDER BY composite_risk_score ASC;  -- lowest score = highest risk, surfaced first
+INTO supplier_risk_scores
+FROM scored;
+
+SELECT * FROM supplier_risk_scores ORDER BY composite_risk_score ASC;
