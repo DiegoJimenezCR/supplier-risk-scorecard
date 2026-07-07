@@ -65,19 +65,16 @@ Weights and thresholds aren't hardcoded assumptions I'm married to — full logi
 Tier 3 is the biggest bucket by far — that's where a corrective action program would have the most impact, not Tier 4 (which is small enough to just handle case by case). Electronic Components suppliers score best on average, Precision Optics worst. And risk isn't clustered in one country — it's spread across the dataset, which is the whole point of scoring at the supplier level instead of just eyeballing by region.
 
 ## Structure
-supplier-risk-scorecard/
-├── data/
-│   └── supplier_quality_data.csv
-├── sql/
-│   ├── 01_data_exploration.sql
-│   ├── 02_risk_score_calculation.sql
-│   └── 03_risk_tier_classification.sql
-├── docs/
-│   ├── methodology.md
-│   └── dax_measures.md
-├── dashboard/
-│   └── dashboard_overview.md
-└── README.md
+## Structure
+
+- `data/supplier_quality_data.csv` — source dataset
+- `sql/01_data_exploration.sql` — profiling and validation
+- `sql/02_risk_score_calculation.sql` — composite score logic
+- `sql/03_risk_tier_classification.sql` — tier assignment view
+- `docs/methodology.md` — full scoring methodology
+- `docs/dax_measures.md` — Power BI DAX measures
+- `dashboard/dashboard_overview.md` — dashboard structure and screenshots
+- `README.md`
 ## Stack
 
 SQL Server (scoring logic), Power BI (Import mode, connects straight to SQL Server), Python/pandas (only used to generate the synthetic dataset — not part of the actual pipeline).
