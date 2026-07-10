@@ -83,6 +83,17 @@ SQL Server for scoring logic. Power BI (Import mode, connects straight to SQL Se
 
 Weights and thresholds here are based on judgment, not fitted against real outcome data. Before this would run in production I'd want to check the weights against actual supply disruptions or quality escapes, get sign off on where the tier cutoffs sit, and figure out a process for manual overrides. Splitting scoring (SQL) from presentation (Power BI) means recalibration doesn't require touching the dashboard at all.
 
+## Dashboard
+
+**Risk Summary**
+![Risk Summary](docs/screenshots/risk-summary.png)
+
+**Risk Breakdown**
+![Risk Breakdown](docs/screenshots/risk-breakdown.png)
+
+**Trend**
+![Trend](docs/screenshots/trend.png)
+
 ## About
 
 Diego Jiménez. Sr. Associate, Data & Process Analyst at Genpact. Background in medical device quality and manufacturing analytics (Genpact, Edwards Lifesciences).
