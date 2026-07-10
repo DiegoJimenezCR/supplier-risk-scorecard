@@ -21,6 +21,8 @@ This gives you one number per supplier instead, and a tier that tells you what t
 **Trend** — six-month movement in the portfolio average, filterable by supplier and tier.
 ![Trend](docs/screenshots/trend.png)
 
+The full `.pbix` file is included in this repo. It connects to a local SQL Server instance and won't refresh without that connection, but opens with all data, visuals, and DAX measures intact — the model, relationships, and calculations are there to inspect.
+
 ## How it's built
 
 Scoring logic lives in SQL, not in the BI layer. Data goes into `supplier_quality_data`. `02_risk_score_calculation.sql` handles normalization, weighting, and aggregation, and writes to `supplier_risk_scores`. `03_risk_tier_classification.sql` builds a view (`vw_supplier_risk_tiers`) that buckets suppliers into tiers. Power BI connects straight to SQL Server and reads those two objects.
@@ -85,6 +87,7 @@ Tier 3 is the largest bucket by far, and the one where a corrective action progr
 - `docs/dax_measures.md`: Power BI DAX measures
 - `docs/screenshots/`: dashboard images
 - `dashboard/dashboard_overview.md`: dashboard structure and screenshots
+- `*.pbix`: full Power BI report file
 - `README.md`
 
 ## Stack
