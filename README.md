@@ -12,16 +12,16 @@ This gives you one number per supplier instead, and a tier that tells you what t
 
 ## Dashboard
 
-**Risk Summary** — portfolio-level view: distribution across tiers, average score, risk concentration by country.
+**Risk Summary**: portfolio-level view. Distribution across tiers, average score, risk concentration by country.
 ![Risk Summary](docs/screenshots/risk-summary.png)
 
-**Risk Breakdown** — supplier-level detail: full ranked table, risk drivers by product category.
+**Risk Breakdown**: supplier-level detail. Full ranked table, risk drivers by product category.
 ![Risk Breakdown](docs/screenshots/risk-breakdown.png)
 
-**Trend** — six-month movement in the portfolio average, filterable by supplier and tier.
+**Trend**: six-month movement in the portfolio average, filterable by supplier and tier.
 ![Trend](docs/screenshots/trend.png)
 
-The full `.pbix` file is included in this repo. It connects to a local SQL Server instance and won't refresh without that connection, but opens with all data, visuals, and DAX measures intact — the model, relationships, and calculations are there to inspect.
+The full `.pbix` file is included in this repo. It connects to a local SQL Server instance and won't refresh without that connection, but opens with all data, visuals, and DAX measures intact. The model, relationships, and calculations are there to inspect.
 
 ## How it's built
 
@@ -48,18 +48,18 @@ Composite score ranges from 0 (worst) to 100 (best), weighted sum of five factor
 | Driver | Weight | Why |
 |---|---|---|
 | Defect Rate | 25% | Most direct signal of product quality |
-| Complaints & Severity | 20% | Volume, severity, and recurrence; a repeat issue counts against you harder than a one-off |
+| Complaints & Severity | 20% | Volume, severity, and recurrence; a repeat issue counts against you harder than a one off |
 | Delivery Reliability | 15% | Whether they can actually deliver on time |
-| Audit / QMS Health | 25% | Weighted as high as defect rate because it's forward-looking, not historical |
+| Audit / QMS Health | 25% | Weighted as high as defect rate because it's forward looking, not historical |
 | Financial Stability | 15% | A supplier can have perfect quality and still be a risk if they're going under |
 
 Tiers:
 
 | Tier | Score | Action |
 |---|---|---|
-| Tier 1, Low Risk | 85–100 | Standard monitoring |
-| Tier 2, Moderate Risk | 70–84 | Routine monitoring |
-| Tier 3, Elevated Risk | 50–69 | Corrective action plan required |
+| Tier 1, Low Risk | 85 to 100 | Standard monitoring |
+| Tier 2, Moderate Risk | 70 to 84 | Routine monitoring |
+| Tier 3, Elevated Risk | 50 to 69 | Corrective action plan required |
 | Tier 4, High Risk | Below 50 | Critical review / requalification |
 
 Weights and thresholds aren't hardcoded assumptions I'm married to. Full logic and formulas are in [`docs/methodology.md`](docs/methodology.md).
@@ -75,7 +75,7 @@ Weights and thresholds aren't hardcoded assumptions I'm married to. Full logic a
 | Tier 3 | 46 | 38.3% | 63.9 |
 | Tier 4 | 3 | 2.5% | 42.1 |
 
-Tier 3 is the largest bucket by far, and the one where a corrective action program would have the most impact, not Tier 4, which is small enough to handle case by case. Electronic Components suppliers score best on average, Precision Optics worst. Risk isn't clustered in a single country either; it's spread across the dataset, which is the point of scoring at the supplier level instead of eyeballing by region.
+Tier 3 is the largest bucket by far, and the one where a corrective action program would have the most impact, not Tier 4, which is small enough to handle case by case. Electronic Components suppliers score best on average, Precision Optics worst. Risk isn't clustered in a single country either. It's spread across the dataset, which is the point of scoring at the supplier level instead of eyeballing by region.
 
 ## Structure
 
@@ -96,7 +96,7 @@ SQL Server for scoring logic. Power BI (Import mode, connects straight to SQL Se
 
 ## What's not done yet
 
-Weights and thresholds here are based on judgment, not fitted against real outcome data. Before this would run in production, I'd want to check the weights against actual supply disruptions or quality escapes, get sign-off on where the tier cutoffs sit, and figure out a process for manual overrides. Splitting scoring (SQL) from presentation (Power BI) means recalibration doesn't require touching the dashboard at all.
+Weights and thresholds here are based on judgment, not fitted against real outcome data. Before this would run in production, I'd want to check the weights against actual supply disruptions or quality escapes, get sign off on where the tier cutoffs sit, and figure out a process for manual overrides. Splitting scoring (SQL) from presentation (Power BI) means recalibration doesn't require touching the dashboard at all.
 
 ## About
 
