@@ -10,9 +10,20 @@ Most supplier quality reporting is a pile of separate numbers: defect rate here,
 
 This gives you one number per supplier instead, and a tier that tells you what to actually do about it.
 
+## Dashboard
+
+**Risk Summary** — portfolio-level view: distribution across tiers, average score, risk concentration by country.
+![Risk Summary](docs/screenshots/risk-summary.png)
+
+**Risk Breakdown** — supplier-level detail: full ranked table, risk drivers by product category.
+![Risk Breakdown](docs/screenshots/risk-breakdown.png)
+
+**Trend** — six-month movement in the portfolio average, filterable by supplier and tier.
+![Trend](docs/screenshots/trend.png)
+
 ## How it's built
 
-Scoring logic lives in SQL, not in the BI layer. Data goes into `supplier_quality_data`. `02_risk_score_calculation.sql` does the normalization, weighting, and aggregation, and writes to `supplier_risk_scores`. `03_risk_tier_classification.sql` builds a view (`vw_supplier_risk_tiers`) that buckets suppliers into tiers. Power BI just connects to SQL Server and reads those two objects.
+Scoring logic lives in SQL, not in the BI layer. Data goes into `supplier_quality_data`. `02_risk_score_calculation.sql` handles normalization, weighting, and aggregation, and writes to `supplier_risk_scores`. `03_risk_tier_classification.sql` builds a view (`vw_supplier_risk_tiers`) that buckets suppliers into tiers. Power BI connects straight to SQL Server and reads those two objects.
 
 Kept it this way on purpose. The scoring rule is a business rule, and I'd rather have that versioned in SQL than buried in a DAX measure someone forgets is doing math.
 
@@ -30,23 +41,23 @@ Kept it this way on purpose. The scoring rule is a business rule, and I'd rather
 
 ## Scoring
 
-Composite score ranges from 0 (worst) to 100 (best), weighted sum of five things:
+Composite score ranges from 0 (worst) to 100 (best), weighted sum of five factors:
 
 | Driver | Weight | Why |
 |---|---|---|
 | Defect Rate | 25% | Most direct signal of product quality |
-| Complaints & Severity | 20% | Volume, severity, and recurrence. A repeat issue counts against you harder than a one off |
-| Delivery Reliability | 15% | Can they actually deliver on time |
-| Audit / QMS Health | 25% | Weighted as high as defect rate because it's forward looking, not historical |
+| Complaints & Severity | 20% | Volume, severity, and recurrence; a repeat issue counts against you harder than a one-off |
+| Delivery Reliability | 15% | Whether they can actually deliver on time |
+| Audit / QMS Health | 25% | Weighted as high as defect rate because it's forward-looking, not historical |
 | Financial Stability | 15% | A supplier can have perfect quality and still be a risk if they're going under |
 
-Then tiers:
+Tiers:
 
 | Tier | Score | Action |
 |---|---|---|
-| Tier 1, Low Risk | 85 to 100 | Standard monitoring |
-| Tier 2, Moderate Risk | 70 to 84 | Routine monitoring |
-| Tier 3, Elevated Risk | 50 to 69 | Needs a corrective action plan |
+| Tier 1, Low Risk | 85–100 | Standard monitoring |
+| Tier 2, Moderate Risk | 70–84 | Routine monitoring |
+| Tier 3, Elevated Risk | 50–69 | Corrective action plan required |
 | Tier 4, High Risk | Below 50 | Critical review / requalification |
 
 Weights and thresholds aren't hardcoded assumptions I'm married to. Full logic and formulas are in [`docs/methodology.md`](docs/methodology.md).
@@ -62,7 +73,7 @@ Weights and thresholds aren't hardcoded assumptions I'm married to. Full logic a
 | Tier 3 | 46 | 38.3% | 63.9 |
 | Tier 4 | 3 | 2.5% | 42.1 |
 
-Tier 3 is the biggest bucket by far. That's where a corrective action program would have the most impact, not Tier 4, which is small enough to just handle case by case. Electronic Components suppliers score best on average, Precision Optics worst. Risk isn't clustered in one country either. It's spread across the dataset, which is the whole point of scoring at the supplier level instead of just eyeballing by region.
+Tier 3 is the largest bucket by far, and the one where a corrective action program would have the most impact, not Tier 4, which is small enough to handle case by case. Electronic Components suppliers score best on average, Precision Optics worst. Risk isn't clustered in a single country either; it's spread across the dataset, which is the point of scoring at the supplier level instead of eyeballing by region.
 
 ## Structure
 
@@ -72,6 +83,7 @@ Tier 3 is the biggest bucket by far. That's where a corrective action program wo
 - `sql/03_risk_tier_classification.sql`: tier assignment view
 - `docs/methodology.md`: full scoring methodology
 - `docs/dax_measures.md`: Power BI DAX measures
+- `docs/screenshots/`: dashboard images
 - `dashboard/dashboard_overview.md`: dashboard structure and screenshots
 - `README.md`
 
@@ -81,18 +93,7 @@ SQL Server for scoring logic. Power BI (Import mode, connects straight to SQL Se
 
 ## What's not done yet
 
-Weights and thresholds here are based on judgment, not fitted against real outcome data. Before this would run in production I'd want to check the weights against actual supply disruptions or quality escapes, get sign off on where the tier cutoffs sit, and figure out a process for manual overrides. Splitting scoring (SQL) from presentation (Power BI) means recalibration doesn't require touching the dashboard at all.
-
-## Dashboard
-
-**Risk Summary**
-![Risk Summary](docs/screenshots/risk-summary.png)
-
-**Risk Breakdown**
-![Risk Breakdown](docs/screenshots/risk-breakdown.png)
-
-**Trend**
-![Trend](docs/screenshots/trend.png)
+Weights and thresholds here are based on judgment, not fitted against real outcome data. Before this would run in production, I'd want to check the weights against actual supply disruptions or quality escapes, get sign-off on where the tier cutoffs sit, and figure out a process for manual overrides. Splitting scoring (SQL) from presentation (Power BI) means recalibration doesn't require touching the dashboard at all.
 
 ## About
 
